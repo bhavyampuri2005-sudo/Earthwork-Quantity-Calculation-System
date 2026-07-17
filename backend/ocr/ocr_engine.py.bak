@@ -1,0 +1,182 @@
+import cv2
+import pytesseract
+import os
+
+
+class OCREngine:
+    """
+    Production OCR Engine
+
+    Responsibilities:
+    1. Preprocess cell
+    2. Rotate image
+    3. OCR
+    4. Return cleaned text
+
+    It DOES NOT:
+    - Know about rows
+    - Know about GL
+    - Know about FL
+    - Save to database
+    """
+
+    def __init__(self, debug_dir="ocr_debug"):
+
+        self.debug_dir = debug_dir
+
+        os.makedirs(
+            self.debug_dir,
+            exist_ok=True
+        )
+
+        self.config = (
+            "--psm 7 "
+            "-c tessedit_char_whitelist=0123456789.-+"
+        )
+
+            # ---------------------------------------------
+    # Preprocess image
+    # ---------------------------------------------
+
+    def preprocess(self, cell):
+
+        if cell is None:
+            return None
+
+        if cell.size == 0:
+            return None
+
+        if len(cell.shape) == 3:
+
+            gray = cv2.cvtColor(
+                cell,
+                cv2.COLOR_BGR2GRAY
+            )
+
+        else:
+
+            gray = cell.copy()
+
+        # Upscale
+
+        gray = cv2.resize(
+            gray,
+            None,
+            fx=3,
+            fy=3,
+            interpolation=cv2.INTER_CUBIC
+        )
+
+        # Small blur
+
+        gray = cv2.GaussianBlur(
+            gray,
+            (3,3),
+            0
+        )
+
+        return gray
+
+            # ---------------------------------------------
+    # Rotate image
+    # ---------------------------------------------
+
+    def rotate_clockwise(self, img):
+
+        return cv2.rotate(
+            img,
+            cv2.ROTATE_90_CLOCKWISE
+        )
+
+    def rotate_counter_clockwise(self, img):
+
+        return cv2.rotate(
+            img,
+            cv2.ROTATE_90_COUNTERCLOCKWISE
+        )
+
+        
+            # ---------------------------------------------
+    # Read one image using multiple preprocessing
+    # ---------------------------------------------
+
+    def read_text(self, img):
+
+        candidates = []
+
+        # ---------- Method 1 : Otsu ----------
+        _, otsu = cv2.threshold(
+            img,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+
+        candidates.append(otsu)
+
+        # ---------- Method 2 : Adaptive ----------
+        adaptive = cv2.adaptiveThreshold(
+            img,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            21,
+            8
+        )
+
+        candidates.append(adaptive)
+
+        # ---------- Method 3 : Inverted ----------
+        _, inv = cv2.threshold(
+            img,
+            0,
+            255,
+            cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+        )
+
+        candidates.append(inv)
+
+        best = ""
+
+        for candidate in candidates:
+
+            text = pytesseract.image_to_string(
+                candidate,
+                config=self.config
+            ).strip()
+
+            if len(text) > len(best):
+                best = text
+
+        return best
+
+
+
+            # ---------------------------------------------
+    # Read one cell
+    # ---------------------------------------------
+
+    def read_cell(self, cell):
+
+        processed = self.preprocess(cell)
+
+        if processed is None:
+            return ""
+
+        # Clockwise first
+        cw = self.rotate_clockwise(processed)
+
+        text = self.read_text(cw)
+
+        if any(c.isdigit() for c in text):
+            return text
+
+        # Counter clockwise
+
+        ccw = self.rotate_counter_clockwise(processed)
+
+        text = self.read_text(ccw)
+
+        return text
+
+    
