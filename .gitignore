@@ -8,3 +8,4 @@ cells_old_100dpi/
 _archive/
 *.png
 uploads/
+.DS_Store

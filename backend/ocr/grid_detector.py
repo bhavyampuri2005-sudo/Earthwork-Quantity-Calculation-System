@@ -220,7 +220,15 @@ class GridDetector:
             11370  # 85 km
         ]
 
-        cols = []
+        # Build the full set of vertical gridline x-positions first
+        # (251 lines = 250 major-span subdivisions + closing 85km line),
+        # then take the MIDPOINT of each adjacent pair as the cell centre.
+        # Sampling at the boundary lines themselves put column 0 on the
+        # 80km axis line and opened a phantom trailing column past the
+        # 85km line (both read blank/garbage across all rows) - the
+        # r9 boundary bug. Midpoints give exactly 250 data cells, each
+        # centred on its 20m station.
+        boundaries = []
 
         for i in range(len(major_cols) - 1):
 
@@ -230,9 +238,14 @@ class GridDetector:
             step = (end - start) / 50
 
             for j in range(50):
-                cols.append(int(start + j * step))
+                boundaries.append(int(start + j * step))
 
-        cols.append(major_cols[-1])
+        boundaries.append(major_cols[-1])
+
+        cols = [
+            (boundaries[k] + boundaries[k + 1]) // 2
+            for k in range(len(boundaries) - 1)
+        ]
 
         self.columns = cols
 
