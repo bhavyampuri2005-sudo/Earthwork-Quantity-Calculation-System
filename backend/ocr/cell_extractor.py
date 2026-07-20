@@ -8,6 +8,12 @@ class CellExtractor:
     horizontal rows and vertical columns.
     """
 
+    # Extra horizontal margin saved beyond the normal inset, so batch_ocr.py
+    # can search a small range of x-offsets per cell before OCR. Per-column
+    # crop position is empirically noisy, not a fixed constant. Must match
+    # the OFFSETS range used in batch_ocr.py.
+    SEARCH_MARGIN = 18
+
     def __init__(self, output_dir="cells"):
         self.output_dir = output_dir
         os.makedirs(
@@ -24,6 +30,8 @@ class CellExtractor:
         if len(columns) < 2:
             raise Exception("Not enough vertical lines detected.")
 
+        img_h, img_w = image.shape[:2]
+
         for r in range(len(rows) - 1):
             y1 = rows[r]
             y2 = rows[r + 1]
@@ -39,18 +47,16 @@ class CellExtractor:
                 width = x2 - x1
                 height = y2 - y1
 
-                # Cells are cropped BEFORE rotation. After the 90-degree
-                # rotate in ocr_engine.py, this crop's y1/y2 (row-boundary
-                # ruling lines) end up on the LEFT/RIGHT edges of the
-                # readable image - that's where the bleed was coming from.
-                # So the bigger inset belongs on the height axis, not width.
                 y_cut = int(height * vertical_inset)
                 x_cut = int(width * horizontal_inset)
 
                 cy1 = y1 + y_cut
                 cy2 = y2 - y_cut
-                cx1 = x1 + x_cut
-                cx2 = x2 - x_cut
+                cx1 = x1 + x_cut - self.SEARCH_MARGIN
+                cx2 = x2 - x_cut + self.SEARCH_MARGIN
+
+                cx1 = max(0, cx1)
+                cx2 = min(img_w, cx2)
 
                 if cx2 <= cx1 or cy2 <= cy1:
                     cx1, cx2, cy1, cy2 = x1, x2, y1, y2

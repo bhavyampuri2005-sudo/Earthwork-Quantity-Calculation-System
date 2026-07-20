@@ -4,9 +4,13 @@ import cv2
 import json
 
 from ocr.ocr_engine import OCREngine
+from ocr.cell_extractor import CellExtractor
 
 
 class BatchOCR:
+
+    OFFSETS = [0, -3, 3, -6, 6, -9, 9, -12, 12, -15]
+    STRICT = re.compile(r"^(\d{3}\.\d{3}|\d{5})-?$")
 
     def __init__(self, cells_dir="cells"):
 
@@ -20,13 +24,40 @@ class BatchOCR:
         so files sort in true grid order (r9_c2 before r9_c10),
         not lexicographic order (r9_c10 before r9_c2).
         """
-        match = re.match(r"r(\d+)_c(\d+)", filename)
+        match = re.match(r"r(\\d+)_c(\\d+)", filename)
         if not match:
-            # Push anything that doesn't match the pattern to the end
-            # instead of crashing, so one bad filename doesn't kill the batch
             return (float("inf"), float("inf"))
         row, col = match.groups()
         return (int(row), int(col))
+
+    def read_with_offset_search(self, img):
+        """
+        Cells are saved wider than needed (CellExtractor.SEARCH_MARGIN extra
+        px each side) specifically so we can try a small set of x-offsets
+        here and keep the first one that reads as a clean value, instead of
+        trusting one fixed crop position (empirically noisy, not constant).
+        """
+        h, w = img.shape[:2]
+        margin = CellExtractor.SEARCH_MARGIN
+        narrow_w = w - 2 * margin
+
+        if narrow_w <= 0:
+            return self.engine.read_cell(img)
+
+        fallback = None
+        for off in self.OFFSETS:
+            cx1 = margin + off
+            cx2 = cx1 + narrow_w
+            if cx1 < 0 or cx2 > w:
+                continue
+            sub = img[:, cx1:cx2]
+            text = self.engine.read_cell(sub)
+            if fallback is None:
+                fallback = text
+            if text and self.STRICT.match(text.strip()):
+                return text
+
+        return fallback
 
     def process(self, limit=None, save_json=False):
 
@@ -60,13 +91,13 @@ class BatchOCR:
                 failed += 1
                 continue
 
-            text = self.engine.read_cell(img)
+            text = self.read_with_offset_search(img)
 
             results[filename] = text
 
             processed += 1
 
-            if text and any(ch.isdigit() for ch in text):
+            if text and self.STRICT.match(text.strip()):
                 success += 1
             else:
                 failed += 1
