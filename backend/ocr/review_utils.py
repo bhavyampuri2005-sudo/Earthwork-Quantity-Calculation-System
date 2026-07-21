@@ -1,3 +1,4 @@
+from ocr.robust_spike import robust_trend_flag
 """
 Shared OCR-review utilities: decimal salvage, valid-range checking, and
 outlier detection for suspect GL/FL readings.
@@ -99,6 +100,14 @@ def flag_spikes(rows, field_idx, threshold=SPIKE_THRESHOLD, window=SPIKE_NEIGHBO
     return flagged
 
 
+def flag_spikes_robust(rows, field_idx, threshold=SPIKE_THRESHOLD, window=15):
+    vals = {i: rows[i][field_idx] for i in range(len(rows))}
+    flags = robust_trend_flag(vals, threshold=threshold, window=window)
+    for i in flags:
+        rows[i][field_idx] = None
+        rows[i][REVIEW_FIELD] = "YES"
+    return len(flags)
+
 def build_review_rows(records, chainage_start, chainage_step=20):
     rows_out = []
     for i, rec in enumerate(records):
@@ -111,9 +120,9 @@ def build_review_rows(records, chainage_start, chainage_step=20):
 
 
 def apply_outlier_detection(rows_out):
-    depth_flagged = flag_implausible_depth(rows_out)
-    gl_spikes = flag_spikes(rows_out, GL_FIELD)
-    fl_spikes = flag_spikes(rows_out, FL_FIELD)
+    gl_spikes = flag_spikes_robust(rows_out, GL_FIELD)
+    fl_spikes = flag_spikes_robust(rows_out, FL_FIELD)
+    depth_flagged = flag_implausible_depth(rows_out, max_depth=100.0)
     return depth_flagged, gl_spikes, fl_spikes
 
 

@@ -55,7 +55,7 @@ class RowReviewService:
                     VALUES (%s, %s, %s, %s)
                     ON CONFLICT (project_id, chainage)
                     DO UPDATE SET status = EXCLUDED.status, reason = EXCLUDED.reason
-                    WHERE RowReview.status = 'pending'
+                    WHERE RowReview.status != 'approved'
                     """,
                     (project_id, chainage, status, reason),
                 )

@@ -1,0 +1,5 @@
+*.bak2
+*.pre_regen_bak
+server.log
+chainageprofile_project1_backup.csv
+raw_gl_fl_dump.csv
