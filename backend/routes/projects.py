@@ -1,7 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from database import get_db
+from routes.auth import get_current_user, require_role
 
 router = APIRouter()
+
 
 @router.post("/projects")
 def create_project(project_name: str):
@@ -16,6 +18,7 @@ def create_project(project_name: str):
     cursor.close()
     conn.close()
     return {"message": "Project created!", "project_id": project_id}
+
 
 @router.get("/projects")
 def get_projects():
@@ -34,15 +37,16 @@ def get_projects():
         })
     return projects
 
+
 @router.delete("/projects/{project_id}")
 def delete_project(project_id: int):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM Projects WHERE project_id = %s", (project_id,))
+    deleted = cursor.rowcount
     conn.commit()
     cursor.close()
     conn.close()
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
     return {"message": "Project deleted!"}
-
-
-

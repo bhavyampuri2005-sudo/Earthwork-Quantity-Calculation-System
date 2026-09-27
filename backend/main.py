@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import get_db
-from routes import projects, chainage, slope, upload, review, calculation, audit
+from routes import projects, chainage, slope, upload, review, calculation, audit, auth
 
 app = FastAPI(title="Earthwork Quantity System")
 
@@ -20,6 +20,7 @@ app.include_router(upload.router)
 app.include_router(review.router)
 app.include_router(calculation.router)
 app.include_router(audit.router)
+app.include_router(auth.router)
 
 
 @app.get("/")

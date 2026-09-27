@@ -63,14 +63,15 @@ export default function UploadPage() {
       setError("Project ID must be a number.");
       return;
     }
-    const chStart = parseFloat(chainageStart);
-    if (Number.isNaN(chStart)) {
-      setError(
-        "Chainage start is required — read it off the drawing's title block, it can't be reliably auto-detected from the scan."
-      );
+    // Optional: leave blank for multi-sheet CAD files (e.g. KRC-style)
+    // whose chainage is read directly from the PDF text. Required only
+    // for scanned drawings, which the backend enforces server-side.
+    const chStart = chainageStart.trim() === "" ? undefined : parseFloat(chainageStart);
+    if (chainageStart.trim() !== "" && Number.isNaN(chStart)) {
+      setError("Chainage start must be a number, or leave it blank.");
       return;
     }
-    const chStep = parseFloat(chainageStep) || 20;
+    const chStep = chainageStep.trim() === "" ? undefined : parseFloat(chainageStep);
     setStatus("working");
     setError(null);
     setResult(null);

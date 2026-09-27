@@ -1,7 +1,13 @@
 [
   {
-    "from_chainage": 79980.0,
-    "to_chainage": 85000.0,
+    "from_chainage": 25000.0,
+    "to_chainage": 68000.0,
+    "side_slope_cut": 1.5,
+    "side_slope_fill": 2.0
+  },
+  {
+    "from_chainage": 25000.0,
+    "to_chainage": 68000.0,
     "side_slope_cut": 1.5,
     "side_slope_fill": 2.0
   }

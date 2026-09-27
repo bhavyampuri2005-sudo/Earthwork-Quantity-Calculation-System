@@ -1,9 +1,21 @@
+import { authHeader, logout } from "./auth";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+      ...options.headers,
+    },
   });
+  if (res.status === 401) {
+    logout();
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Not authenticated");
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
@@ -17,6 +29,7 @@ async function request(path, options = {}) {
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
+
 export const api = {
   getChainage: (projectId) => request(`/chainage/${projectId}`),
   updateChainage: (id, data) =>
@@ -30,15 +43,25 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ project_id: projectId }),
     }),
-  uploadPdf: async (projectId, file, chainageStart, chainageStep = 20) => {
+  uploadPdf: async (projectId, file, chainageStart, chainageStep) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("chainage_start", String(chainageStart));
-    formData.append("chainage_step", String(chainageStep));
+    if (chainageStart !== undefined && chainageStart !== null && !Number.isNaN(chainageStart)) {
+      formData.append("chainage_start", String(chainageStart));
+    }
+    if (chainageStep !== undefined && chainageStep !== null && !Number.isNaN(chainageStep)) {
+      formData.append("chainage_step", String(chainageStep));
+    }
     const res = await fetch(`${BASE_URL}/upload-pdf/${projectId}`, {
       method: "POST",
+      headers: { ...authHeader() },
       body: formData,
     });
+    if (res.status === 401) {
+      logout();
+      if (typeof window !== "undefined") window.location.href = "/login";
+      throw new Error("Not authenticated");
+    }
     if (!res.ok) {
       let detail = res.statusText;
       try {
@@ -65,4 +88,5 @@ export const api = {
     });
   },
 };
+
 export default api;

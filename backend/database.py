@@ -1,3 +1,4 @@
+import os
 import psycopg2
 
 def get_db():
@@ -7,7 +8,7 @@ def get_db():
         host="localhost",
         database="earthwork_db",
         user="postgres",
-        password="Bhavyam@123"
+        password=os.environ.get("DB_PASSWORD", "")
     )
     
     print("Connected!")

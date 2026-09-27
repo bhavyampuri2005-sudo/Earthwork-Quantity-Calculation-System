@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from database import get_db
+from routes.auth import get_current_user
 
 router = APIRouter()
 

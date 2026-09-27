@@ -32,7 +32,9 @@ import csv
 from earthwork.slope_master import SlopeMaster
 
 FORMATION_WIDTH_B = 7.85  # project-configured formation width (m)
-ELEV_MIN, ELEV_MAX = 20, 600  # plausible GL/FL range - guards against unreviewed OCR garbage
+ELEV_MIN, ELEV_MAX = -100.0, 5000.0  # plausible GL/FL range; matches the band
+# text_native_extractor already validates against. The old 20-600 ceiling silently
+# nulled every station on corridors above 600m (the KM10-25 stretch sits at ~800m).
 
 
 def classify(gl, fl):
